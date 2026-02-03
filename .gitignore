@@ -1,0 +1,32 @@
+# AgroMonitor - Git Ignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# Datos locales (no subir a GitHub)
+data/
+logs/
+
+# Archivos con credenciales (IMPORTANTE: no subir)
+.env
+db_config.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporales
+*.tmp
+*.bak

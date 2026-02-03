@@ -1,0 +1,40 @@
+{
+    "polygon": {
+        "id": "69810584a049de7a8d4b4156",
+        "nombre": "los valles",
+        "descripcion": "Finca de 2 hectáreas en Veraguas, Panamá",
+        "cultivos": {
+            "platano": {
+                "area_hectareas": 1.0,
+                "emoji": "🍌"
+            },
+            "hortalizas": {
+                "area_hectareas": 0.5,
+                "tipos": [
+                    "tomate",
+                    "pimentón"
+                ],
+                "emoji": "🌶️"
+            },
+            "tuberculos": {
+                "area_hectareas": 0.5,
+                "tipos": [
+                    "yuca",
+                    "ñame"
+                ],
+                "emoji": "🥔"
+            }
+        },
+        "ubicacion": {
+            "latitud": 8.439227,
+            "longitud": -81.191935,
+            "altitud_msnm": 379.62,
+            "region": "Veraguas",
+            "pais": "Panamá"
+        }
+    },
+    "api": {
+        "nota": "Agrega tu API Key de Agromonitoring aquí",
+        "api_key": "6892cb4b5a99f53f4a0927d98cf05d61"
+    }
+}

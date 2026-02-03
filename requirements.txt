@@ -1,0 +1,18 @@
+# AgroMonitor - Dependencias del Proyecto
+# Instalar con: pip install -r requirements.txt
+
+# API requests
+requests>=2.28.0
+
+# PostgreSQL
+psycopg2-binary>=2.9.0
+
+# Web Server
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Scheduler
+apscheduler>=3.10.0
+
+# Environment variables
+python-dotenv>=1.0.0

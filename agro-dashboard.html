@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroMonitor Pro - Dashboard Agrícola</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.8);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --gradient-primary: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            --gradient-warm: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            --shadow-glow: 0 0 40px rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .location-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-glass);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-glass);
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Config Panel */
+        .config-panel {
+            max-width: 500px;
+            margin: 4rem auto;
+            padding: 2rem;
+        }
+
+        .config-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .config-card h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .config-card p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            display: none;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-full {
+            grid-template-columns: 1fr;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .card-icon.yellow {
+            background: var(--gradient-warm);
+        }
+
+        .card-icon.blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+
+        .card-icon.purple {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+        }
+
+        /* Stat Cards */
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .stat-change.positive {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .stat-change.negative {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+        }
+
+        /* Weather Section */
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .weather-temp {
+            font-size: 4rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .weather-icon {
+            font-size: 4rem;
+        }
+
+        .weather-desc {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            text-transform: capitalize;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .weather-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .weather-item-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .weather-item-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .weather-item-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Forecast Section */
+        .forecast-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+        }
+
+        .forecast-day {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .forecast-day:hover {
+            background: rgba(16, 185, 129, 0.1);
+            transform: scale(1.02);
+        }
+
+        .forecast-day.active {
+            background: var(--gradient-primary);
+        }
+
+        .forecast-date {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .forecast-icon {
+            font-size: 2rem;
+            margin: 0.5rem 0;
+        }
+
+        .forecast-temp {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .forecast-rain {
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+        }
+
+        /* API Limits Panel */
+        .limits-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .limit-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .limit-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-green);
+        }
+
+        .limit-item.warning::before {
+            background: var(--accent-yellow);
+        }
+
+        .limit-item.critical::before {
+            background: var(--accent-red);
+        }
+
+        .limit-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .limit-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .limit-max {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Map */
+        #map {
+            height: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        /* Index Cards */
+        .index-display {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .index-value {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .index-bar {
+            height: 8px;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+            border-radius: 4px;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .index-marker {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transform: translateX(-50%);
+            transition: left 0.5s ease;
+        }
+
+        .index-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Soil Section */
+        .soil-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .soil-stat {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .soil-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .soil-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .soil-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Alerts */
+        .alerts-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .alert.warning {
+            border-left-color: var(--accent-yellow);
+        }
+
+        .alert.error {
+            border-left-color: var(--accent-red);
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .alert-message {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Chart */
+        .chart-container {
+            height: 250px;
+            margin-top: 1rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-glass);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Last Update */
+        .last-update {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .weather-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .forecast-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .limits-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .grid-4,
+            .grid-3,
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .weather-main {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .weather-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .forecast-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .limits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .soil-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-animation"></div>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🌱</div>
+                <h1>AgroMonitor Pro</h1>
+            </div>
+            <div class="header-info">
+                <div class="location-badge">
+                    <span>📍</span>
+                    <span>Veraguas, Panamá</span>
+                    <span>•</span>
+                    <span>2 Hectáreas</span>
+                    <span>•</span>
+                    <span>379.62 msnm</span>
+                </div>
+                <div class="location-badge">
+                    <div class="status-dot"></div>
+                    <span id="connectionStatus">Conectando...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard - Se inicia automáticamente -->
+    <div class="dashboard" id="dashboard">
+        <!-- Quick Stats -->
+        <div class="grid grid-4">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🌡️</div>
+                        <span>Temperatura</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="tempValue">--°C</div>
+                <div class="stat-label">Sensación: <span id="feelsLike">--°C</span></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon yellow">💧</div>
+                        <span>Humedad</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="humidityValue">--%</div>
+                <div class="stat-label">Punto de rocío: <span id="dewPoint">--°C</span></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon blue">🌿</div>
+                        <span>NDVI</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="ndviValue">--</div>
+                <div class="stat-label" id="ndviStatus">Cargando...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon purple">🌍</div>
+                        <span>Humedad Suelo</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="soilMoistureValue">--%</div>
+                <div class="stat-label" id="soilStatus">Cargando...</div>
+            </div>
+        </div>
+
+        <!-- Weather & Forecast -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon yellow">☀️</div>
+                        <span>Clima Actual</span>
+                    </div>
+                    <span class="last-update" id="weatherUpdate">--</span>
+                </div>
+                <div id="weatherContent" class="loading">
+                    <div class="spinner"></div>
+                    <span>Cargando clima...</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon blue">📅</div>
+                        <span>Pronóstico 5 Días</span>
+                    </div>
+                </div>
+                <div id="forecastContent" class="loading">
+                    <div class="spinner"></div>
+                    <span>Cargando pronóstico...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map & Soil -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🗺️</div>
+                        <span>Tu Finca</span>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon purple">🌍</div>
+                        <span>Datos del Suelo</span>
+                    </div>
+                    <span class="last-update" id="soilUpdate">--</span>
+                </div>
+                <div id="soilContent" class="loading">
+                    <div class="spinner"></div>
+                    <span>Cargando datos del suelo...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- NDVI & Alerts -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        <span>Histórico NDVI (30 días)</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ndviChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon yellow">🔔</div>
+                        <span>Alertas y Recomendaciones</span>
+                    </div>
+                </div>
+                <div id="alertsContent" class="alerts-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Analizando condiciones...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Temperature Chart (Min/Max + NDVI) -->
+        <div class="grid grid-full">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🌡️</div>
+                        <span>Temperatura Diaria (Mín/Máx) + NDVI - Próximos 5 días</span>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="tempNdviChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Precipitation Charts -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon blue">🌧️</div>
+                        <span>Precipitación Diaria (mm)</span>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 280px;">
+                    <canvas id="precipChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon purple">💧</div>
+                        <span>Precipitación Acumulada (mm)</span>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 280px;">
+                    <canvas id="accumPrecipChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Limits -->
+        <div class="grid grid-full">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📈</div>
+                        <span>Límites del API - Plan Gratuito</span>
+                    </div>
+                </div>
+                <div class="limits-grid">
+                    <div class="limit-item">
+                        <div class="limit-label">🛰️ Datos Satelitales</div>
+                        <div class="limit-value">
+                            < 60</div>
+                                <div class="limit-max">llamadas/minuto</div>
+                        </div>
+                        <div class="limit-item">
+                            <div class="limit-label">☀️ Weather API</div>
+                            <div class="limit-value">
+                                < 500</div>
+                                    <div class="limit-max">llamadas/día</div>
+                            </div>
+                            <div class="limit-item">
+                                <div class="limit-label">📦 Polígonos</div>
+                                <div class="limit-value">
+                                    < 10</div>
+                                        <div class="limit-max">creados/mes</div>
+                                </div>
+                                <div class="limit-item">
+                                    <div class="limit-label">🌍 Actualización Suelo</div>
+                                    <div class="limit-value">2x</div>
+                                    <div class="limit-max">por día</div>
+                                </div>
+                                <div class="limit-item">
+                                    <div class="limit-label">⏱️ Actualización Weather</div>
+                                    <div class="limit-value">
+                                        < 2</div>
+                                            <div class="limit-max">horas</div>
+                                    </div>
+                                    <div class="limit-item">
+                                        <div class="limit-label">📡 Imágenes Satelitales</div>
+                                        <div class="limit-value">3-5</div>
+                                        <div class="limit-max">días entre actualizaciones</div>
+                                    </div>
+                                </div>
+                                <div class="last-update" style="margin-top: 1rem;">
+                                    Licencia: CC BY-SA 4.0 | Base de datos: ODbL
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        // ============================================
+                        // CONFIGURACIÓN AUTOMÁTICA - polygon_config.json
+                        // ============================================
+                        const CONFIG = {
+                            api_key: '6892cb4b5a99f53f4a0927d98cf05d61',
+                            polygon_id: '69810584a049de7a8d4b4156',
+                            polygon_name: 'los valles',
+                            location: {
+                                lat: 8.439227,
+                                lon: -81.191935,
+                                altitude: 379.62,
+                                region: 'Veraguas, Panamá'
+                            }
+                        };
+
+                        // Variables globales
+                        let apiKey = CONFIG.api_key;
+                        let polygonId = CONFIG.polygon_id;
+                        let map = null;
+
+                        const farmCenter = [CONFIG.location.lat, CONFIG.location.lon];
+                        const farmPolygon = [
+                            [8.440, -81.193],
+                            [8.440, -81.190],
+                            [8.438, -81.190],
+                            [8.438, -81.193],
+                            [8.440, -81.193]
+                        ];
+
+                        // Weather icons map
+                        const weatherIcons = {
+                            'Clear': '☀️',
+                            'Clouds': '☁️',
+                            'Rain': '🌧️',
+                            'Drizzle': '🌦️',
+                            'Thunderstorm': '⛈️',
+                            'Snow': '❄️',
+                            'Mist': '🌫️',
+                            'Fog': '🌫️'
+                        };
+
+                        // AUTO-INICIALIZAR al cargar la página
+                        document.addEventListener('DOMContentLoaded', async function () {
+                            console.log('🌱 AgroMonitor Pro - Iniciando automáticamente...');
+                            console.log('📍 Polígono:', CONFIG.polygon_name);
+
+                            // Mostrar dashboard directamente
+                            document.getElementById('dashboard').classList.add('active');
+                            document.getElementById('connectionStatus').textContent = 'En línea';
+
+                            // Initialize map
+                            initMap();
+
+                            // Load all data
+                            await loadAllData();
+
+                            // Auto-refresh every 10 minutes
+                            setInterval(loadAllData, 600000);
+                        });
+
+                        function initMap() {
+                            map = L.map('map').setView(farmCenter, 15);
+
+                            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                                attribution: '© OpenStreetMap, © CartoDB'
+                            }).addTo(map);
+
+                            const polygon = L.polygon(farmPolygon, {
+                                color: '#10b981',
+                                fillColor: '#10b981',
+                                fillOpacity: 0.3,
+                                weight: 2
+                            }).addTo(map);
+
+                            L.marker(farmCenter).addTo(map)
+                                .bindPopup('<b>Tu Finca</b><br>2 hectáreas<br>Veraguas, Panamá');
+
+                            map.fitBounds(polygon.getBounds());
+                        }
+
+                        async function loadAllData() {
+                            await Promise.all([
+                                loadWeather(),
+                                loadForecast(),
+                                loadSoilData(),
+                                loadNDVI(),
+                                loadNDVIHistory(),
+                                generateAlerts(),
+                                loadTemperatureNdviChart(),
+                                loadPrecipitationCharts()
+                            ]);
+                        }
+
+                        async function loadWeather() {
+                            try {
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/weather?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const data = await response.json();
+
+                                const temp = Math.round(data.main.temp - 273.15);
+                                const feelsLike = Math.round(data.main.feels_like - 273.15);
+                                const humidity = data.main.humidity;
+                                const pressure = data.main.pressure;
+                                const windSpeed = data.wind.speed;
+                                const windDeg = data.wind.deg || 0;
+                                const clouds = data.clouds.all;
+                                const visibility = data.visibility ? (data.visibility / 1000).toFixed(1) : 'N/A';
+                                const weatherDesc = data.weather[0].description;
+                                const weatherMain = data.weather[0].main;
+
+                                // Calculate dew point
+                                const dewPoint = Math.round(temp - ((100 - humidity) / 5));
+
+                                // Update quick stats
+                                document.getElementById('tempValue').textContent = `${temp}°C`;
+                                document.getElementById('feelsLike').textContent = `${feelsLike}°C`;
+                                document.getElementById('humidityValue').textContent = `${humidity}%`;
+                                document.getElementById('dewPoint').textContent = `${dewPoint}°C`;
+
+                                // Full weather display
+                                const windDirection = getWindDirection(windDeg);
+
+                                const html = `
+                    <div class="weather-main">
+                        <div class="weather-icon">${weatherIcons[weatherMain] || '🌤️'}</div>
+                        <div>
+                            <div class="weather-temp">${temp}°C</div>
+                            <div class="weather-desc">${weatherDesc}</div>
+                        </div>
+                    </div>
+                    <div class="weather-grid">
+                        <div class="weather-item">
+                            <div class="weather-item-icon">🌡️</div>
+                            <div class="weather-item-value">${feelsLike}°C</div>
+                            <div class="weather-item-label">Sensación</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">💧</div>
+                            <div class="weather-item-value">${humidity}%</div>
+                            <div class="weather-item-label">Humedad</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">🌬️</div>
+                            <div class="weather-item-value">${windSpeed} m/s</div>
+                            <div class="weather-item-label">${windDirection}</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">📊</div>
+                            <div class="weather-item-value">${pressure}</div>
+                            <div class="weather-item-label">hPa</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">☁️</div>
+                            <div class="weather-item-value">${clouds}%</div>
+                            <div class="weather-item-label">Nubosidad</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">👁️</div>
+                            <div class="weather-item-value">${visibility}</div>
+                            <div class="weather-item-label">km Visib.</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">💦</div>
+                            <div class="weather-item-value">${dewPoint}°C</div>
+                            <div class="weather-item-label">P. Rocío</div>
+                        </div>
+                        <div class="weather-item">
+                            <div class="weather-item-icon">🧭</div>
+                            <div class="weather-item-value">${windDeg}°</div>
+                            <div class="weather-item-label">Dir. Viento</div>
+                        </div>
+                    </div>
+                `;
+
+                                document.getElementById('weatherContent').innerHTML = html;
+                                document.getElementById('weatherUpdate').textContent =
+                                    `Actualizado: ${new Date().toLocaleTimeString('es-PA')}`;
+
+                            } catch (error) {
+                                console.error('Error loading weather:', error);
+                                document.getElementById('weatherContent').innerHTML =
+                                    '<p style="color: var(--accent-red);">Error cargando datos del clima</p>';
+                            }
+                        }
+
+                        async function loadForecast() {
+                            try {
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const data = await response.json();
+
+                                // Group by day
+                                const dailyData = {};
+                                data.forEach(item => {
+                                    const date = new Date(item.dt * 1000);
+                                    const dayKey = date.toLocaleDateString('es-PA', { weekday: 'short', day: 'numeric' });
+
+                                    if (!dailyData[dayKey]) {
+                                        dailyData[dayKey] = {
+                                            temps: [],
+                                            weather: item.weather[0].main,
+                                            rain: 0
+                                        };
+                                    }
+
+                                    dailyData[dayKey].temps.push(item.main.temp - 273.15);
+                                    if (item.rain && item.rain['3h']) {
+                                        dailyData[dayKey].rain += item.rain['3h'];
+                                    }
+                                });
+
+                                const html = `
+                    <div class="forecast-container">
+                        ${Object.entries(dailyData).slice(0, 5).map(([day, data]) => {
+                                    const avgTemp = Math.round(data.temps.reduce((a, b) => a + b, 0) / data.temps.length);
+                                    return `
+                                <div class="forecast-day">
+                                    <div class="forecast-date">${day}</div>
+                                    <div class="forecast-icon">${weatherIcons[data.weather] || '🌤️'}</div>
+                                    <div class="forecast-temp">${avgTemp}°C</div>
+                                    ${data.rain > 0 ? `<div class="forecast-rain">💧 ${data.rain.toFixed(1)}mm</div>` : ''}
+                                </div>
+                            `;
+                                }).join('')}
+                    </div>
+                `;
+
+                                document.getElementById('forecastContent').innerHTML = html;
+
+                            } catch (error) {
+                                console.error('Error loading forecast:', error);
+                                document.getElementById('forecastContent').innerHTML =
+                                    '<p style="color: var(--accent-red);">Error cargando pronóstico</p>';
+                            }
+                        }
+
+                        async function loadSoilData() {
+                            try {
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/soil?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const data = await response.json();
+
+                                const soilTemp = (data.t10 - 273.15).toFixed(1);
+                                const soilMoisture = (data.moisture * 100).toFixed(0);
+
+                                // Update quick stat
+                                document.getElementById('soilMoistureValue').textContent = `${soilMoisture}%`;
+
+                                let moistureStatus = 'Óptimo';
+                                if (soilMoisture < 30) moistureStatus = '⚠️ Bajo';
+                                else if (soilMoisture > 70) moistureStatus = '⚠️ Alto';
+                                document.getElementById('soilStatus').textContent = moistureStatus;
+
+                                const html = `
+                    <div class="soil-stats">
+                        <div class="soil-stat">
+                            <div class="soil-icon">🌡️</div>
+                            <div class="soil-value">${soilTemp}°C</div>
+                            <div class="soil-label">Temperatura (10cm)</div>
+                        </div>
+                        <div class="soil-stat">
+                            <div class="soil-icon">💧</div>
+                            <div class="soil-value">${soilMoisture}%</div>
+                            <div class="soil-label">Humedad</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <div class="limit-label">Estado del suelo</div>
+                        <div class="index-bar" style="background: linear-gradient(90deg, #8B4513, #10b981, #3b82f6);">
+                            <div class="index-marker" style="left: ${soilMoisture}%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+                            <span>Seco</span>
+                            <span>Óptimo</span>
+                            <span>Saturado</span>
+                        </div>
+                    </div>
+                `;
+
+                                document.getElementById('soilContent').innerHTML = html;
+                                document.getElementById('soilUpdate').textContent =
+                                    `Actualizado: ${new Date(data.dt * 1000).toLocaleString('es-PA')}`;
+
+                            } catch (error) {
+                                console.error('Error loading soil data:', error);
+                                document.getElementById('soilContent').innerHTML =
+                                    '<p style="color: var(--accent-red);">Error cargando datos del suelo</p>';
+                            }
+                        }
+
+                        async function loadNDVI() {
+                            try {
+                                const end = Math.floor(Date.now() / 1000);
+                                const start = end - (30 * 24 * 60 * 60);
+
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/image/search?start=${start}&end=${end}&polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const images = await response.json();
+
+                                if (images.length > 0 && images[0].stats.ndvi) {
+                                    const statsResponse = await fetch(images[0].stats.ndvi);
+                                    const stats = await statsResponse.json();
+
+                                    const ndviValue = stats.mean || 0;
+                                    document.getElementById('ndviValue').textContent = ndviValue.toFixed(3);
+
+                                    let status = 'Excelente';
+                                    if (ndviValue < 0.2) status = '⚠️ Bajo';
+                                    else if (ndviValue < 0.4) status = 'Moderado';
+                                    else if (ndviValue < 0.6) status = 'Saludable';
+                                    else if (ndviValue < 0.8) status = 'Muy bueno';
+
+                                    document.getElementById('ndviStatus').textContent = status;
+                                } else {
+                                    document.getElementById('ndviValue').textContent = 'N/A';
+                                    document.getElementById('ndviStatus').textContent = 'Sin datos recientes';
+                                }
+
+                            } catch (error) {
+                                console.error('Error loading NDVI:', error);
+                                document.getElementById('ndviValue').textContent = 'Error';
+                            }
+                        }
+
+                        async function loadNDVIHistory() {
+                            try {
+                                const end = Math.floor(Date.now() / 1000);
+                                const start = end - (30 * 24 * 60 * 60);
+
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/image/search?start=${start}&end=${end}&polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const images = await response.json();
+
+                                const ndviData = [];
+                                const labels = [];
+
+                                for (const image of images) {
+                                    if (image.stats && image.stats.ndvi) {
+                                        try {
+                                            const statsResponse = await fetch(image.stats.ndvi);
+                                            const stats = await statsResponse.json();
+
+                                            ndviData.push(stats.mean || 0);
+                                            labels.push(new Date(image.dt * 1000).toLocaleDateString('es-PA', {
+                                                month: 'short',
+                                                day: 'numeric'
+                                            }));
+                                        } catch (e) {
+                                            console.log('Error getting stats for image');
+                                        }
+                                    }
+                                }
+
+                                ndviData.reverse();
+                                labels.reverse();
+
+                                const ctx = document.getElementById('ndviChart').getContext('2d');
+
+                                if (window.ndviChart) {
+                                    window.ndviChart.destroy();
+                                }
+
+                                window.ndviChart = new Chart(ctx, {
+                                    type: 'line',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'NDVI',
+                                            data: ndviData,
+                                            borderColor: '#10b981',
+                                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                            borderWidth: 3,
+                                            fill: true,
+                                            tension: 0.4,
+                                            pointRadius: 4,
+                                            pointBackgroundColor: '#10b981'
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false }
+                                        },
+                                        scales: {
+                                            y: {
+                                                min: -0.2,
+                                                max: 1,
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { color: 'rgba(255,255,255,0.05)' }
+                                            },
+                                            x: {
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { display: false }
+                                            }
+                                        }
+                                    }
+                                });
+
+                            } catch (error) {
+                                console.error('Error loading NDVI history:', error);
+                            }
+                        }
+
+                        async function generateAlerts() {
+                            try {
+                                const alerts = [];
+
+                                // Get weather data
+                                const weatherResponse = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/weather?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const weather = await weatherResponse.json();
+
+                                // Get soil data
+                                const soilResponse = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/soil?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const soil = await soilResponse.json();
+
+                                const temp = weather.main.temp - 273.15;
+                                const moisture = soil.moisture * 100;
+
+                                // Temperature alerts
+                                if (temp > 32) {
+                                    alerts.push({
+                                        type: 'warning',
+                                        icon: '🌡️',
+                                        title: 'Temperatura Alta',
+                                        message: `${temp.toFixed(1)}°C - Aumentar riego en hortalizas`
+                                    });
+                                }
+
+                                // Soil moisture alerts
+                                if (moisture < 30) {
+                                    alerts.push({
+                                        type: 'warning',
+                                        icon: '💧',
+                                        title: 'Suelo Seco',
+                                        message: `Humedad ${moisture.toFixed(0)}% - Programar riego pronto`
+                                    });
+                                } else if (moisture > 70) {
+                                    alerts.push({
+                                        type: 'warning',
+                                        icon: '🌊',
+                                        title: 'Suelo Saturado',
+                                        message: `Humedad ${moisture.toFixed(0)}% - Verificar drenaje`
+                                    });
+                                } else {
+                                    alerts.push({
+                                        type: 'success',
+                                        icon: '✅',
+                                        title: 'Humedad Óptima',
+                                        message: `Suelo en condiciones ideales (${moisture.toFixed(0)}%)`
+                                    });
+                                }
+
+                                // Crop recommendations
+                                alerts.push({
+                                    type: 'info',
+                                    icon: '🍌',
+                                    title: 'Plátano',
+                                    message: 'Revisar hojas para signos de Sigatoka'
+                                });
+
+                                alerts.push({
+                                    type: 'info',
+                                    icon: '🌶️',
+                                    title: 'Hortalizas',
+                                    message: 'Continuar calendario de fertilización'
+                                });
+
+                                // Render alerts
+                                const html = alerts.map(alert => `
+                    <div class="alert ${alert.type}">
+                        <div class="alert-icon">${alert.icon}</div>
+                        <div class="alert-content">
+                            <div class="alert-title">${alert.title}</div>
+                            <div class="alert-message">${alert.message}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                                document.getElementById('alertsContent').innerHTML = html;
+
+                            } catch (error) {
+                                console.error('Error generating alerts:', error);
+                                document.getElementById('alertsContent').innerHTML =
+                                    '<p style="color: var(--accent-red);">Error generando alertas</p>';
+                            }
+                        }
+
+                        function getWindDirection(deg) {
+                            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+                            const index = Math.round(deg / 45) % 8;
+                            return directions[index];
+                        }
+
+                        // ============================================
+                        // NEW: Temperature + NDVI Chart (Daily)
+                        // ============================================
+                        async function loadTemperatureNdviChart() {
+                            try {
+                                // Get forecast data
+                                const forecastResponse = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const forecastData = await forecastResponse.json();
+
+                                // Get NDVI history
+                                const end = Math.floor(Date.now() / 1000);
+                                const start = end - (30 * 24 * 60 * 60);
+                                const ndviResponse = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/image/search?start=${start}&end=${end}&polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const ndviImages = await ndviResponse.json();
+
+                                // Process forecast by day (get min/max)
+                                const dailyData = {};
+                                forecastData.forEach(item => {
+                                    const date = new Date(item.dt * 1000);
+                                    const dayKey = date.toLocaleDateString('es-PA', {
+                                        weekday: 'short',
+                                        day: 'numeric',
+                                        month: 'short'
+                                    });
+
+                                    if (!dailyData[dayKey]) {
+                                        dailyData[dayKey] = {
+                                            temps: [],
+                                            date: date
+                                        };
+                                    }
+                                    dailyData[dayKey].temps.push(item.main.temp - 273.15);
+                                });
+
+                                // Calculate min/max for each day
+                                const labels = [];
+                                const minTemps = [];
+                                const maxTemps = [];
+
+                                Object.entries(dailyData).slice(0, 5).forEach(([day, data]) => {
+                                    labels.push(day);
+                                    minTemps.push(Math.round(Math.min(...data.temps)));
+                                    maxTemps.push(Math.round(Math.max(...data.temps)));
+                                });
+
+                                // Get last NDVI value to show as reference line
+                                let lastNdvi = null;
+                                if (ndviImages.length > 0 && ndviImages[0].stats.ndvi) {
+                                    try {
+                                        const statsResponse = await fetch(ndviImages[0].stats.ndvi);
+                                        const stats = await statsResponse.json();
+                                        lastNdvi = stats.mean;
+                                    } catch (e) {
+                                        console.log('Could not get NDVI stats');
+                                    }
+                                }
+
+                                // Create chart
+                                const ctx = document.getElementById('tempNdviChart').getContext('2d');
+
+                                if (window.tempNdviChart) {
+                                    window.tempNdviChart.destroy();
+                                }
+
+                                const datasets = [
+                                    {
+                                        label: 'Temp. Máxima (°C)',
+                                        data: maxTemps,
+                                        borderColor: '#ef4444',
+                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                        borderWidth: 3,
+                                        fill: false,
+                                        tension: 0.3,
+                                        yAxisID: 'y'
+                                    },
+                                    {
+                                        label: 'Temp. Mínima (°C)',
+                                        data: minTemps,
+                                        borderColor: '#3b82f6',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        borderWidth: 3,
+                                        fill: false,
+                                        tension: 0.3,
+                                        yAxisID: 'y'
+                                    }
+                                ];
+
+                                // Add NDVI as horizontal reference if available
+                                if (lastNdvi !== null) {
+                                    datasets.push({
+                                        label: `NDVI Actual (${lastNdvi.toFixed(2)})`,
+                                        data: labels.map(() => lastNdvi * 40), // Scale NDVI to temp range
+                                        borderColor: '#10b981',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        fill: false,
+                                        pointRadius: 0,
+                                        yAxisID: 'y1'
+                                    });
+                                }
+
+                                window.tempNdviChart = new Chart(ctx, {
+                                    type: 'line',
+                                    data: { labels, datasets },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        interaction: {
+                                            mode: 'index',
+                                            intersect: false
+                                        },
+                                        plugins: {
+                                            legend: {
+                                                labels: { color: '#9ca3af' }
+                                            },
+                                            tooltip: {
+                                                backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                                titleColor: '#f9fafb',
+                                                bodyColor: '#9ca3af'
+                                            }
+                                        },
+                                        scales: {
+                                            y: {
+                                                type: 'linear',
+                                                position: 'left',
+                                                title: {
+                                                    display: true,
+                                                    text: 'Temperatura (°C)',
+                                                    color: '#9ca3af'
+                                                },
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { color: 'rgba(255,255,255,0.05)' }
+                                            },
+                                            y1: {
+                                                type: 'linear',
+                                                position: 'right',
+                                                min: 0,
+                                                max: 1,
+                                                title: {
+                                                    display: true,
+                                                    text: 'NDVI',
+                                                    color: '#10b981'
+                                                },
+                                                ticks: {
+                                                    color: '#10b981',
+                                                    callback: function (value) {
+                                                        return (value).toFixed(1);
+                                                    }
+                                                },
+                                                grid: { display: false }
+                                            },
+                                            x: {
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { display: false }
+                                            }
+                                        }
+                                    }
+                                });
+
+                            } catch (error) {
+                                console.error('Error loading temperature chart:', error);
+                            }
+                        }
+
+                        // ============================================
+                        // NEW: Precipitation Charts (Daily + Accumulated)
+                        // ============================================
+                        async function loadPrecipitationCharts() {
+                            try {
+                                // Get forecast data
+                                const response = await fetch(
+                                    `http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid=${polygonId}&appid=${apiKey}`
+                                );
+                                const forecastData = await response.json();
+
+                                // Process forecast by day
+                                const dailyPrecip = {};
+                                forecastData.forEach(item => {
+                                    const date = new Date(item.dt * 1000);
+                                    const dayKey = date.toLocaleDateString('es-PA', {
+                                        weekday: 'short',
+                                        day: 'numeric'
+                                    });
+
+                                    if (!dailyPrecip[dayKey]) {
+                                        dailyPrecip[dayKey] = 0;
+                                    }
+
+                                    // Add precipitation (rain or snow)
+                                    if (item.rain && item.rain['3h']) {
+                                        dailyPrecip[dayKey] += item.rain['3h'];
+                                    }
+                                    if (item.snow && item.snow['3h']) {
+                                        dailyPrecip[dayKey] += item.snow['3h'];
+                                    }
+                                });
+
+                                // Prepare data arrays
+                                const labels = Object.keys(dailyPrecip).slice(0, 5);
+                                const precipValues = labels.map(day => parseFloat(dailyPrecip[day].toFixed(1)));
+
+                                // Calculate accumulated precipitation
+                                const accumValues = [];
+                                let accumulated = 0;
+                                precipValues.forEach(val => {
+                                    accumulated += val;
+                                    accumValues.push(parseFloat(accumulated.toFixed(1)));
+                                });
+
+                                // Chart 1: Daily Precipitation
+                                const ctx1 = document.getElementById('precipChart').getContext('2d');
+
+                                if (window.precipChart) {
+                                    window.precipChart.destroy();
+                                }
+
+                                window.precipChart = new Chart(ctx1, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Precipitación (mm)',
+                                            data: precipValues,
+                                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                            borderColor: '#3b82f6',
+                                            borderWidth: 2,
+                                            borderRadius: 8
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                                callbacks: {
+                                                    label: function (context) {
+                                                        return `${context.parsed.y} mm`;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                title: {
+                                                    display: true,
+                                                    text: 'mm',
+                                                    color: '#9ca3af'
+                                                },
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { color: 'rgba(255,255,255,0.05)' }
+                                            },
+                                            x: {
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { display: false }
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // Chart 2: Accumulated Precipitation
+                                const ctx2 = document.getElementById('accumPrecipChart').getContext('2d');
+
+                                if (window.accumPrecipChart) {
+                                    window.accumPrecipChart.destroy();
+                                }
+
+                                window.accumPrecipChart = new Chart(ctx2, {
+                                    type: 'line',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Acumulado (mm)',
+                                            data: accumValues,
+                                            borderColor: '#8b5cf6',
+                                            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                            borderWidth: 3,
+                                            fill: true,
+                                            tension: 0.3,
+                                            pointRadius: 6,
+                                            pointBackgroundColor: '#8b5cf6'
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                                callbacks: {
+                                                    label: function (context) {
+                                                        return `Total: ${context.parsed.y} mm`;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                title: {
+                                                    display: true,
+                                                    text: 'mm acumulados',
+                                                    color: '#9ca3af'
+                                                },
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { color: 'rgba(255,255,255,0.05)' }
+                                            },
+                                            x: {
+                                                ticks: { color: '#9ca3af' },
+                                                grid: { display: false }
+                                            }
+                                        }
+                                    }
+                                });
+
+                            } catch (error) {
+                                console.error('Error loading precipitation charts:', error);
+                            }
+                        }
+                    </script>
+</body>
+
+</html>
